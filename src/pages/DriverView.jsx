@@ -11,6 +11,7 @@ export default function DriverView() {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState('');
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [socketStatus, setSocketStatus] = useState('Disconnected');
   
   // Settings modal
   const [showConfig, setShowConfig] = useState(false);
@@ -40,16 +41,31 @@ export default function DriverView() {
     setError('');
     setIsTransmitting(true);
 
-    // Initialize Socket Connection
-    socketRef.current = io(backendUrl);
+    // Initialize Socket Connection with explicit websocket transport
+    const cleanUrl = backendUrl.trim().replace(/\/$/, '');
+    socketRef.current = io(cleanUrl, {
+      transports: ['websocket'],
+      reconnection: true,
+      forceNew: true
+    });
 
     socketRef.current.on('connect', () => {
       console.log('Connected to backend socket:', socketRef.current.id);
+      setSocketStatus('Connected');
+      setError('');
     });
 
     socketRef.current.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
-      setError('Failed to connect to backend via WebSocket.');
+      setSocketStatus('Disconnected');
+      setError(`Failed to connect to backend: ${err.message}. Make sure the URL is correct and includes https:// if using a tunnel.`);
+    });
+
+    socketRef.current.on('disconnect', (reason) => {
+      setSocketStatus('Disconnected');
+      if (reason === 'io server disconnect') {
+        socketRef.current.connect();
+      }
     });
 
     // Start watching position
@@ -61,7 +77,7 @@ export default function DriverView() {
         // Emit location update over socket
         if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit('driver_location_update', {
-            bus_number: busNumber,
+            bus_number: busNumber.trim().toUpperCase(),
             latitude,
             longitude
           });
@@ -159,8 +175,16 @@ export default function DriverView() {
               </form>
             ) : (
               <div>
-                <div className="status-badge status-active" style={{ marginBottom: '1.5rem', fontSize: '1rem', padding: '0.5rem 1rem' }}>
-                  <div className="dot dot-active"></div> Transmitting as {busNumber}
+                <div className="status-badges" style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginBottom: '1.5rem' }}>
+                  <div className={`status-badge ${isTransmitting ? 'status-active' : ''}`} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+                    <div className={`dot ${isTransmitting ? 'dot-active' : ''}`}></div> GPS: {isTransmitting ? 'Active' : 'Off'}
+                  </div>
+                  <div className={`status-badge ${socketStatus === 'Connected' ? 'status-active' : 'status-expired'}`} style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+                    <div className={`dot ${socketStatus === 'Connected' ? 'dot-active' : 'dot-expired'}`}></div> Server: {socketStatus}
+                  </div>
+                  <div className="status-badge" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', background: '#f1f5f9', color: '#1e293b' }}>
+                    Bus: {busNumber.toUpperCase()}
+                  </div>
                 </div>
 
                 <div className="stat-grid" style={{ marginBottom: '2rem' }}>
