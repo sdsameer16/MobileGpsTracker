@@ -187,6 +187,12 @@ export default function DriverView() {
                   </div>
                 </div>
 
+                {lastUpdate && (
+                  <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#64748b', marginBottom: '1rem', fontWeight: '600' }}>
+                    Last Sync: {lastUpdate.toLocaleTimeString()}
+                  </div>
+                )}
+
                 <div className="stat-grid" style={{ marginBottom: '2rem' }}>
                   <div className="stat-card">
                     <div className="stat-value">{location?.latitude?.toFixed(5) || '--'}</div>
