@@ -42,9 +42,16 @@ export default function DriverView() {
     setIsTransmitting(true);
 
     // Initialize Socket Connection with explicit websocket transport
-    const cleanUrl = backendUrl.trim().replace(/\/$/, '');
+    let cleanUrl = backendUrl.trim().replace(/\/$/, '');
+    
+    // Force WSS if using a public tunnel on an HTTPS page
+    if (cleanUrl.startsWith('https://')) {
+      cleanUrl = cleanUrl.replace('https://', 'wss://');
+    }
+    
     socketRef.current = io(cleanUrl, {
       transports: ['websocket'],
+      secure: true,
       reconnection: true,
       forceNew: true
     });
