@@ -81,7 +81,7 @@ export default function DriverView() {
     socketRef.current.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
       setSocketStatus('Disconnected');
-      setError(`Failed to connect to backend: ${err.message}. Use an https:// tunnel URL on secure pages.`);
+      setError(`Failed to connect to backend: ${err.message}. If you are using a tunnel, try polling-only or verify the tunnel supports WebSocket.`);
     });
 
     socketRef.current.on('disconnect', (reason) => {
