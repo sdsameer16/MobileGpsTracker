@@ -66,10 +66,14 @@ export default function DriverView() {
     // Initialize Socket.IO connection with a browser-safe base URL
     const socketBaseUrl = normalizeBackendUrl(backendUrl);
 
+    const isNgrok = /ngrok\.(io|free\.app|free\.dev)$/i.test(new URL(socketBaseUrl).hostname);
+    const socketQuery = isNgrok ? { 'ngrok-skip-browser-warning': 'true' } : undefined;
+
     socketRef.current = io(socketBaseUrl, {
       transports: ['websocket', 'polling'],
       reconnection: true,
-      forceNew: true
+      forceNew: true,
+      query: socketQuery
     });
 
     socketRef.current.on('connect', () => {
