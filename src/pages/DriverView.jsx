@@ -20,6 +20,28 @@ export default function DriverView() {
   const watchIdRef = useRef(null);
   const socketRef = useRef(null);
 
+  const normalizeBackendUrl = (rawUrl) => {
+    let url = rawUrl.trim().replace(/\/$/, '');
+
+    if (!/^https?:\/\//i.test(url) && !/^wss?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+
+    if (window.location.protocol === 'https:' && url.startsWith('http://')) {
+      url = url.replace('http://', 'https://');
+    }
+
+    if (url.startsWith('ws://')) {
+      url = url.replace('ws://', 'http://');
+    }
+
+    if (url.startsWith('wss://')) {
+      url = url.replace('wss://', 'https://');
+    }
+
+    return url;
+  };
+
   const saveConfig = (e) => {
     e.preventDefault();
     setBackendUrl(tempUrl);
@@ -41,17 +63,11 @@ export default function DriverView() {
     setError('');
     setIsTransmitting(true);
 
-    // Initialize Socket Connection with explicit websocket transport
-    let cleanUrl = backendUrl.trim().replace(/\/$/, '');
-    
-    // Force WSS if using a public tunnel on an HTTPS page
-    if (cleanUrl.startsWith('https://')) {
-      cleanUrl = cleanUrl.replace('https://', 'wss://');
-    }
-    
-    socketRef.current = io(cleanUrl, {
-      transports: ['websocket'],
-      secure: true,
+    // Initialize Socket.IO connection with a browser-safe base URL
+    const socketBaseUrl = normalizeBackendUrl(backendUrl);
+
+    socketRef.current = io(socketBaseUrl, {
+      transports: ['websocket', 'polling'],
       reconnection: true,
       forceNew: true
     });
@@ -65,7 +81,7 @@ export default function DriverView() {
     socketRef.current.on('connect_error', (err) => {
       console.error('Socket connection error:', err.message);
       setSocketStatus('Disconnected');
-      setError(`Failed to connect to backend: ${err.message}. Make sure the URL is correct and includes https:// if using a tunnel.`);
+      setError(`Failed to connect to backend: ${err.message}. Use an https:// tunnel URL on secure pages.`);
     });
 
     socketRef.current.on('disconnect', (reason) => {
